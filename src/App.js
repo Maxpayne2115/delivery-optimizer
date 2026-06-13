@@ -20,7 +20,7 @@ export default function DeliveryOptimizer() {
     'TEST02': { customer: 'Test 2', address: '50 Raffles Pl, Singapore 048623', fee: 6.00, lat: 1.2832, lng: 103.8507 },
   };
 
-  // ERP zones
+  // ERP zones in Singapore
   const erpZones = [
     { name: 'CBD', lat: 1.2832, lng: 103.8507, radius: 2.5, active: true, peakPrice: 6.50 },
     { name: 'Orchard', lat: 1.3053, lng: 103.8329, radius: 1.8, active: true, peakPrice: 5.00 },
@@ -28,7 +28,7 @@ export default function DeliveryOptimizer() {
     { name: 'Sentosa Approach', lat: 1.2465, lng: 103.8190, radius: 1.2, active: false, peakPrice: 0 },
   ];
 
-  // Get location
+  // Get user location
   useEffect(() => {
     navigator.geolocation.getCurrentPosition(
       pos => setCurrentLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
@@ -36,7 +36,7 @@ export default function DeliveryOptimizer() {
     );
   }, []);
 
-  // Calculate distance
+  // Calculate distance between two points (Haversine formula)
   const calculateDistance = (lat1, lng1, lat2, lng2) => {
     const R = 6371;
     const dLat = ((lat2 - lat1) * Math.PI) / 180;
@@ -46,37 +46,44 @@ export default function DeliveryOptimizer() {
     return R * c;
   };
 
-  // Route optimization
+  // Route optimization with ERP penalty
   const optimizeRoute = (parcelList, userLat, userLng) => {
     if (parcelList.length === 0) return [];
-    let optimized = [];
-    let remaining = [...parcelList];
+    
+    const optimized = [];
+    const remaining = [...parcelList];
     let currentLat = userLat;
     let currentLng = userLng;
-  
+
     while (remaining.length > 0) {
       let closest = null;
       let closestIdx = 0;
       let minDistance = Infinity;
-  
-      remaining.forEach((p, idx) => {
+
+      // Find closest parcel
+      for (let i = 0; i < remaining.length; i += 1) {
+        const p = remaining[i];
         const dist = calculateDistance(currentLat, currentLng, p.lat, p.lng);
         let erpPenalty = 0;
-        erpZones.forEach(zone => {
+
+        // Check ERP zones
+        for (let j = 0; j < erpZones.length; j += 1) {
+          const zone = erpZones[j];
           const zoneDistance = calculateDistance(p.lat, p.lng, zone.lat, zone.lng);
           if (zoneDistance < zone.radius && zone.active) {
             erpPenalty += 2;
           }
-        });
-  
+        }
+
         const totalCost = dist + erpPenalty;
         if (totalCost < minDistance) {
           minDistance = totalCost;
           closest = p;
-          closestIdx = idx;
+          closestIdx = i;
         }
-      });
-  
+      }
+
+      // Add closest parcel to route
       if (closest) {
         optimized.push({ ...closest, sequence: optimized.length + 1 });
         currentLat = closest.lat;
@@ -84,10 +91,11 @@ export default function DeliveryOptimizer() {
         remaining.splice(closestIdx, 1);
       }
     }
+
     return optimized;
   };
 
-  // Handle scan
+  // Handle barcode scan
   const handleScan = () => {
     const barcode = scannedBarcode.trim().toUpperCase();
     if (parcelDatabase[barcode]) {
@@ -103,7 +111,7 @@ export default function DeliveryOptimizer() {
     }
   };
 
-  // Mark delivered
+  // Mark parcel as delivered
   const markDelivered = (barcode) => {
     const parcel = parcels.find(p => p.barcode === barcode);
     if (parcel) {
@@ -116,7 +124,7 @@ export default function DeliveryOptimizer() {
     }
   };
 
-  // Check ERP
+  // Check if location is in ERP zone
   const isInERPZone = (lat, lng) => {
     return erpZones.find(zone => {
       const dist = calculateDistance(lat, lng, zone.lat, zone.lng);
@@ -124,6 +132,7 @@ export default function DeliveryOptimizer() {
     });
   };
 
+  // Get monthly data
   const getMonthData = () => {
     return [
       { date: '2024-06-01', delivered: 28, earned: 154.50 },
@@ -136,7 +145,7 @@ export default function DeliveryOptimizer() {
 
   return (
     <div style={{ fontFamily: 'system-ui', background: '#f5f5f5', minHeight: '100vh', padding: '12px' }}>
-      {/* Navigation */}
+      {/* Navigation Tabs */}
       <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', background: 'white', padding: '8px', borderRadius: '8px' }}>
         {[
           { id: 'scanner', label: 'Scan', icon: '📱' },
