@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import './App.css';
 
 export default function DeliveryOptimizer() {
@@ -53,12 +53,12 @@ export default function DeliveryOptimizer() {
     let remaining = [...parcelList];
     let currentLat = userLat;
     let currentLng = userLng;
-
+  
     while (remaining.length > 0) {
       let closest = null;
       let closestIdx = 0;
       let minDistance = Infinity;
-
+  
       remaining.forEach((p, idx) => {
         const dist = calculateDistance(currentLat, currentLng, p.lat, p.lng);
         let erpPenalty = 0;
@@ -68,7 +68,7 @@ export default function DeliveryOptimizer() {
             erpPenalty += 2;
           }
         });
-
+  
         const totalCost = dist + erpPenalty;
         if (totalCost < minDistance) {
           minDistance = totalCost;
@@ -76,7 +76,7 @@ export default function DeliveryOptimizer() {
           closestIdx = idx;
         }
       });
-
+  
       if (closest) {
         optimized.push({ ...closest, sequence: optimized.length + 1 });
         currentLat = closest.lat;
